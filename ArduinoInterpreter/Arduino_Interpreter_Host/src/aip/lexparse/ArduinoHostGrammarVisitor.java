@@ -12,9 +12,21 @@ import org.antlr.v4.runtime.tree.ParseTreeVisitor;
  */
 public interface ArduinoHostGrammarVisitor<T> extends ParseTreeVisitor<T> {
 	/**
-	 * Visit a parse tree produced by {@link ArduinoHostGrammarParser#r}.
+	 * Visit a parse tree produced by {@link ArduinoHostGrammarParser#readCommand}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitR(@NotNull ArduinoHostGrammarParser.RContext ctx);
+	T visitReadCommand(@NotNull ArduinoHostGrammarParser.ReadCommandContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ArduinoHostGrammarParser#setCommand}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSetCommand(@NotNull ArduinoHostGrammarParser.SetCommandContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ArduinoHostGrammarParser#command}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCommand(@NotNull ArduinoHostGrammarParser.CommandContext ctx);
 }

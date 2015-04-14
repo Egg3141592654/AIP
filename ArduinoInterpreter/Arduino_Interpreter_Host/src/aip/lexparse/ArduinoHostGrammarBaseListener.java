@@ -17,13 +17,37 @@ public class ArduinoHostGrammarBaseListener implements ArduinoHostGrammarListene
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterR(@NotNull ArduinoHostGrammarParser.RContext ctx) { }
+	@Override public void enterReadCommand(@NotNull ArduinoHostGrammarParser.ReadCommandContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitR(@NotNull ArduinoHostGrammarParser.RContext ctx) { }
+	@Override public void exitReadCommand(@NotNull ArduinoHostGrammarParser.ReadCommandContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterSetCommand(@NotNull ArduinoHostGrammarParser.SetCommandContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitSetCommand(@NotNull ArduinoHostGrammarParser.SetCommandContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterCommand(@NotNull ArduinoHostGrammarParser.CommandContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitCommand(@NotNull ArduinoHostGrammarParser.CommandContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

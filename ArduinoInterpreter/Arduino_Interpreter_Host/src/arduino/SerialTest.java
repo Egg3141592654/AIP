@@ -3,10 +3,13 @@ package arduino;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+
 import gnu.io.CommPortIdentifier; 
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent; 
 import gnu.io.SerialPortEventListener; 
+
+import java.util.ArrayList;
 import java.util.Enumeration;
 
 
@@ -102,6 +105,23 @@ public class SerialTest implements SerialPortEventListener {
 			}
 		}
 		// Ignore all the other eventTypes, but you should consider the other ones.
+	}
+	
+	public synchronized void writeData(ArrayList<String> toWrite)
+	{
+		try
+		{
+			for(String arg : toWrite)
+			{
+				output.write(arg.getBytes());
+				output.flush();
+			}
+		}
+		catch(Exception e)
+		{
+			//Something bad happened during write
+			System.err.println(e.toString());
+		}
 	}
 
 	public static void main(String[] args) throws Exception {

@@ -18,5 +18,19 @@ public class ArduinoHostGrammarBaseVisitor<T> extends AbstractParseTreeVisitor<T
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitR(@NotNull ArduinoHostGrammarParser.RContext ctx) { return visitChildren(ctx); }
+	@Override public T visitReadCommand(@NotNull ArduinoHostGrammarParser.ReadCommandContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitSetCommand(@NotNull ArduinoHostGrammarParser.SetCommandContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitCommand(@NotNull ArduinoHostGrammarParser.CommandContext ctx) { return visitChildren(ctx); }
 }

@@ -1,5 +1,16 @@
 package aip.lexparse;
 
-public class LexparseTest {
+import static org.junit.Assert.*;
+
+import org.junit.Test;
+
+public class LexparseTest 
+{
+
+	@Test
+	public void setTest() 
+	{
+		
+	}
 
 }
