@@ -4,40 +4,80 @@ This is the low level aspect of theArduino Interpreter Project
 **/
 #include <QueueList.h> //from http://playground.arduino.cc/Code/QueueList
 
-//First things first, define a bunch of masking functions
-QueueList<char> parse(String input);
-
 //initialize the constant token values here
-const char INVALID   = 0;
-const char END       = 1;
-const char INT       = 2;
-const char FLOAT     = 3;
-const char READ      = 4;
-const char SET       = 5;
-const char DIGITAL   = 6;
-const char ANALOG    = 7;
+enum Token {
+	INVALID,
+	END,
+	INT,
+	FLOAT,
+	READ,
+	SET,
+	DIGITAL,
+	ANALOG,
+	NONE
+};
 
 //Initialize globals
-QueueList<char> tokens;
+QueueList<Token> tokens;
+char ch;
+String lineIn;
+Token currentToken;
+Token peekToken;
+
+//First things first, define a bunch of masking functions
+QueueList<Token> parse(String input);
+Token nextToken(void);
 
 /**
 This only runs once
 **/
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
+	// put your setup code here, to run once:
+ 	Serial.begin(9600);
 }
 
 /**
 This loops over and over again
 **/
 void loop() {
-  Serial.println("Yo Deadbolt!");
-  delay(1000);
+	if(Serial.available())
+	{
+		//The higher level just sent us some stuff, read it in.
+		lineIn += Serial.read();
+		if(lineIn[lineIn.length()] == '\n')
+		{
+			//we are done with this line, do something with parse
+			parse(lineIn);
+		}
+	}
 }
 
-QueueList<char> parse(String input)
+/**
+This method parses the input returned from reading the line.
+**/
+QueueList<Token> parse(String input)
 {
-  
-  return tokens;
+	Serial.println("We are parsing something now!\n");
+	lineIn.remove(0);
+	return tokens;
+}
+
+/**
+This method returns the type of token that was just read in from this serial stream.
+**/
+Token nextToken(void)
+{
+	char chLoc = Serial.read();
+	if(chLoc == ' ')
+	{
+		return NONE;
+	}
+
+	String word;
+	while(chLoc != ' ')
+	{
+		word += chLoc;
+	}
+
+	return INVALID;
 }
