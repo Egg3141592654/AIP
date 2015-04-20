@@ -43,8 +43,8 @@ void loop() {
 	if(Serial.available())
 	{
 		//The higher level just sent us some stuff, read it in.
-		lineIn += Serial.read();
-		if(lineIn[lineIn.length()] == '\n')
+		lineIn += (char) Serial.read();
+		if(lineIn[lineIn.length() - 1] == '\n')
 		{
 			//we are done with this line, do something with parse
 			parse(lineIn);

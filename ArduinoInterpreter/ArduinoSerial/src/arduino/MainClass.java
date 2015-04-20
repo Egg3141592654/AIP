@@ -1,12 +1,15 @@
 package arduino;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+
 import gnu.io.CommPortIdentifier; 
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent; 
 import gnu.io.SerialPortEventListener; 
+
 import java.util.Enumeration;
 
 
@@ -35,7 +38,7 @@ public class MainClass implements SerialPortEventListener {
 	public void initialize() {
                 // the next line is for Raspberry Pi and 
                 // gets us into the while loop and was suggested here was suggested http://www.raspberrypi.org/phpBB3/viewtopic.php?f=81&t=32186
-                System.setProperty("gnu.io.rxtx.SerialPorts", "/dev/ttyACM0");
+                //System.setProperty("gnu.io.rxtx.SerialPorts", "/dev/ttyACM0");
 
 		CommPortIdentifier portId = null;
 		Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
@@ -88,6 +91,30 @@ public class MainClass implements SerialPortEventListener {
 			serialPort.close();
 		}
 	}
+	
+	public void writeData(String line)
+    {
+        try
+        {
+        	output.write(line.getBytes());
+        	output.flush();
+            /*output.write(leftThrottle);
+            output.flush();
+            //this is a delimiter for the data
+            output.write(DASH_ASCII);
+            output.flush();
+
+            output.write(rightThrottle);
+            output.flush();
+            //will be read as a byte so it is a space key
+            output.write(SPACE_ASCII);
+            output.flush();*/
+        }
+        catch (Exception e)
+        {
+            System.out.println("Failed to write data. (" + e.toString() + ")");
+        }
+    }
 
 	/**
 	 * Handle an event on the serial port. Read the data and print it.
@@ -107,14 +134,37 @@ public class MainClass implements SerialPortEventListener {
 	public static void main(String[] args) throws Exception {
 		MainClass main = new MainClass();
 		main.initialize();
-		Thread t=new Thread() {
-			public void run() {
-				//the following line will keep this app alive for 1000 seconds,
-				//waiting for events to occur and responding to them (printing incoming messages to console).
-				try {Thread.sleep(1000000);} catch (InterruptedException ie) {}
-			}
-		};
-		t.start();
 		System.out.println("Started");
+		
+		try
+		{
+			InputStreamReader input = new InputStreamReader(System.in, "utf-8");
+			BufferedReader buff = new BufferedReader(input);
+			
+			System.out.println("Welcome to the AIP Project. This is still in pre-alpha, so don't hate!");
+			boolean stop = false;
+			
+			while(!stop)
+			{
+				System.out.print(">> ");
+			
+				String line = buff.readLine();
+				
+				stop = line.compareTo("exit") == 0;
+				
+				line += '\n';
+			
+				main.writeData(line);
+			}
+		}
+		catch(IOException e)
+		{
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
+		System.out.println("Goodbye!");
+		
+		main.close(); //shut down the port
 	}
 }
