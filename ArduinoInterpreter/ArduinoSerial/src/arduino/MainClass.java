@@ -98,17 +98,6 @@ public class MainClass implements SerialPortEventListener {
         {
         	output.write(line.getBytes());
         	output.flush();
-            /*output.write(leftThrottle);
-            output.flush();
-            //this is a delimiter for the data
-            output.write(DASH_ASCII);
-            output.flush();
-
-            output.write(rightThrottle);
-            output.flush();
-            //will be read as a byte so it is a space key
-            output.write(SPACE_ASCII);
-            output.flush();*/
         }
         catch (Exception e)
         {
@@ -124,6 +113,10 @@ public class MainClass implements SerialPortEventListener {
 			try {
 				String inputLine=input.readLine();
 				System.out.println(inputLine);
+				if(inputLine.compareTo("Done!") == 0)
+				{
+					System.out.print(">> ");
+				}
 			} catch (Exception e) {
 				System.err.println(e.toString());
 			}
