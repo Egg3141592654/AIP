@@ -76,6 +76,7 @@ public class MainClass implements SerialPortEventListener {
 			// add event listeners
 			serialPort.addEventListener(this);
 			serialPort.notifyOnDataAvailable(true);
+			serialPort.disableReceiveTimeout();
 		} catch (Exception e) {
 			System.err.println(e.toString());
 		}

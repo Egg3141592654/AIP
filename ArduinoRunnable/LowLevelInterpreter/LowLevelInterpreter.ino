@@ -23,13 +23,15 @@ enum Token {
 struct _aetoken
 {
 	Token token;
-	char * data;
+	String data;
 };
 
 typedef struct _aetoken AEToken;
 
 //Initialize globals
-std::vector<AEToken> tokens;
+AEToken tokens[10];
+int tokenIndex = 0;
+int parseIndex = 0;
 char ch;
 String lineIn;
 AEToken *currentToken = NULL;
@@ -46,10 +48,25 @@ void scanANALOGToken(AEToken * toPass);
 void scanDIGITALToken(AEToken * toPass);
 void scanHIGHToken(AEToken * toPass);
 void scanLOWToken(AEToken * toPass);
+void parseReadCommand();
+void parseSetCommand();
+Token peekNextToken();
+Token getNextToken();
+Token getCurrentToken();
+String getCurrentParseData();
 void destroyAEToken(AEToken * target);
 void debug(AEToken * target);
 String readWord();
 char readNextChar();
+
+//masked functions to attempt
+void attemptAnalogWrite();
+void attemptAnalogRead();
+void attemptDigitalRead();
+void attemptDigitalWrite();
+
+//debug variables
+bool justDone = true;
 
 /**
 This only runs once
@@ -71,8 +88,16 @@ void loop() {
 		{
 			//we are done with this line, do something with parse
 			lineInCnt = 0; //reset for the latest string
+			tokenIndex = 0; //reset for new stream of tokens
 			parse(lineIn);
+			justDone = true;
 		}
+	}
+
+	if(justDone)
+	{
+		//Serial.println("We are still alive");
+		justDone = false;
 	}
 }
 
@@ -81,8 +106,6 @@ Completely destroys the AEToken pointer. Don't do something stupid like pass it 
 **/
 void destroyAEToken(AEToken * target)
 {
-	if((target->token == INT) || (target->token == FLOAT))
-		free(target->data);
 	free(target);
 }
 
@@ -91,23 +114,39 @@ This method parses the input returned from reading the line.
 **/
 void parse(String input)
 {
-	Serial.println("We are parsing something now!\n");
+	//Serial.println("We are parsing the string " + lineIn);
 	AEToken * temp;
 	ch = readNextChar();
 	nextToken(temp);
 	lineIn.remove(0);
 
+	if(tokens[0].token == NONE)
+	{
+		Serial.println("Attempted to delete things that weren't here");
+		return;
+	}
+
 	//do some stuff with parsing here
+	//int parsingIndex = 0;
+	switch(tokens[0].token)
+	{
+		case READ:
+			parseReadCommand();
+			break;
+		case SET:
+			parseSetCommand();
+			break;
+		default:
+			Serial.println("Parser doesn't recognize this command. SET and READ are the only two to read.");
+	}
 
 	//flush it all out!
-	Serial.println("Starting flush");
-	for(int i = tokens.size() -1; i >= 0; i--)
+	//Serial.print("Token number = "); Serial.println(tokenIndex);
+	for(int i = 0; i < tokenIndex; i++)
 	{
-		temp = &tokens[i];
-		debug(temp);
-		destroyAEToken(temp);
-		tokens.pop_back();
+		debug(&tokens[i]);
 	}
+
 	Serial.println("Done!");
 }
 
@@ -116,7 +155,7 @@ This method returns the type of token that was just read in from this serial str
 **/
 void nextToken(AEToken * toPass)
 {
-	while(ch != '\n')
+	while(lineInCnt < lineIn.length())
 	{
 		int c = (char) ch;
 		switch(c)
@@ -157,13 +196,18 @@ void nextToken(AEToken * toPass)
 			case 'L':
 				scanLOWToken(toPass);
 				break;
+			case '\n':
+				tokens[tokenIndex].token = NONE;
+				tokenIndex++;
+				return;
+				break;
 			case '\t':
 			case ' ':
 				ch = readNextChar(); //there must be more, per contract
 				break;
 			default:
-				Serial.println("Error, command not completed, flushing buffer!");
-				lineIn.remove(0);
+				//Serial.println("Error, command not completed, flushing buffer!");
+				//lineIn.remove(0);
 				return;
 		}
 	}
@@ -174,6 +218,7 @@ Scan and store an INT token into the tokens vector yo
 **/
 void scanINTToken(AEToken * toPass)
 {
+	Serial.println("Reading int");
 	String sb;
 	sb += readWord();
 	
@@ -184,17 +229,23 @@ void scanINTToken(AEToken * toPass)
 		flt |= sb[i] == '.';
 	}
 
-	toPass = (AEToken *)(malloc(sizeof(AEToken)));
-	toPass->data = (char *)malloc(sizeof(char) * sb.length() + 1);
-	toPass->token = flt ? FLOAT : INT;
-	toPass->data[0] = (char) sb.length(); //stuff the length of this pointer as the first address
-
-	for(int i = 1; i <= sb.length(); i++)
+	tokens[tokenIndex].token = flt ? FLOAT : INT;
+	
+	/*
+	//char * logic
+	for(int i = 0; i < sb.length(); i++)
 	{
-		toPass->data[i] = sb[i - 1];
+		tokens[tokenIndex].data += sb[i];
+	}*/
+
+	//String logic
+	tokens[tokenIndex].data = "";
+	for(int i = 0; i < sb.length(); i++)
+	{
+		tokens[tokenIndex].data += sb[i];
 	}
 
-	tokens.push_back(*toPass); //need to free this bud!
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -209,14 +260,14 @@ void scanREADToken(AEToken * toPass)
 
 	if(temp.compareTo("READ") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = READ;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = READ;
 	}
 	else
 	{
-		Serial.println("IDS ARENT WUPPORTED YET YO!");
+		Serial.println("IDS ARENT SUPPORTED YET YO!");
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -231,14 +282,15 @@ void scanANALOGToken(AEToken * toPass)
 
 	if(temp.compareTo("ANALOG") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = ANALOG;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = ANALOG;
 	}
 	else
 	{
-		Serial.println("IDS ARENT WUPPORTED YET YO!");
+		Serial.println("IDS ARENT SUPPORTED YET YO!");
+		Serial.print("Found sequence " + temp);
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -253,14 +305,14 @@ void scanDIGITALToken(AEToken * toPass)
 
 	if(temp.compareTo("DIGITAL") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = DIGITAL;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = DIGITAL;
 	}
 	else
 	{
 		Serial.println("IDS ARENT WUPPORTED YET YO!");
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -275,14 +327,14 @@ void scanHIGHToken(AEToken * toPass)
 
 	if(temp.compareTo("HIGH") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = LOGICHIGH;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = LOGICHIGH;
 	}
 	else
 	{
 		Serial.println("IDS ARENT WUPPORTED YET YO!");
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -297,14 +349,14 @@ void scanLOWToken(AEToken * toPass)
 
 	if(temp.compareTo("LOW") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = LOGICLOW;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = LOGICLOW;
 	}
 	else
 	{
 		Serial.println("IDS ARENT WUPPORTED YET YO!");
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -319,14 +371,14 @@ void scanSETToken(AEToken * toPass)
 
 	if(temp.compareTo("SET") == 0)
 	{
-		toPass = (AEToken *)malloc(sizeof(AEToken));
-		toPass->token = SET;
-		tokens.push_back(*toPass);
+		tokens[tokenIndex].token = SET;
 	}
 	else
 	{
 		Serial.println("IDS ARENT WUPPORTED YET YO!");
 	}
+
+	tokenIndex++; //integrate for the next token
 }
 
 /**
@@ -337,12 +389,11 @@ String readWord()
 	String temp;
 	while((ch != ' ') && (ch != '\t') && (ch != '\n'))
 	{
+		//Serial.println("Read char " + ch);
 		temp += ch;
 
 		ch = readNextChar();
 	}
-
-	Serial.println("Read word " + temp);
 
 	return temp;
 }
@@ -362,20 +413,11 @@ void debug(AEToken * target)
 		break;
 	case INT:
 		Serial.print("INT ");
-		for(int i = 1; i <= target->data[0]; i++)
-		{
-			temp += target->data[i];
-		}
-
+		temp = target->data;
 		Serial.println(temp.toInt());
 		break;
 	case FLOAT:
 		Serial.print("FLOAT ");
-		for(int i = 1; i <= target->data[0]; i++)
-		{
-			temp += target->data[i];
-		}
-
 		Serial.println(temp.toFloat());
 		break;
 	case READ:
@@ -410,4 +452,117 @@ char readNextChar()
 	char tmp = lineIn[lineInCnt];
 	lineInCnt++;
 	return tmp;
+}
+
+void parseReadCommand()
+{
+	//we alreaday know that the first token was the read
+	//check if the user set the next token to be analog or digital
+
+	switch(getNextToken())
+	{
+		case ANALOG:
+			getNextToken(); //set up the read function
+			attemptAnalogRead();
+			break;
+		case DIGITAL:
+			getNextToken(); //set up the read function
+			attemptDigitalRead();
+			break;
+		case INT:
+			attemptDigitalRead();
+			break;
+		case FLOAT:
+			Serial.println("Warning, converting float to an int. This isn't safe yo!");
+			attemptDigitalRead();
+			break;
+		default:
+			Serial.println("Parsing error on the read command. Please see the command outline for instructions");
+	}
+}
+
+void parseSetCommand()
+{
+	//we alreaday know that the first token was the set
+}
+
+Token peekNextToken()
+{
+	if(tokenIndex ==  parseIndex)
+		return INVALID;
+
+	return tokens[parseIndex + 1].token;
+}
+
+Token getNextToken()
+{
+	if(tokenIndex == parseIndex)
+		return INVALID;
+
+	parseIndex++;
+	return tokens[parseIndex].token;
+}
+
+Token getCurrentToken()
+{
+	return tokens[parseIndex].token;
+}
+
+String getCurrentParseData()
+{
+	return tokens[parseIndex].data;
+}
+
+void attemptAnalogWrite()
+{
+
+}
+
+void attemptAnalogRead()
+{
+	//we are here looking to read the pin at this token. check if we are safe.
+	if(!(getCurrentToken() == INT || getCurrentToken() == FLOAT))
+	{
+		Serial.println("Cannot read pins that aren't numbers!");
+		return;
+	}
+
+	int pin = getCurrentParseData().toInt();
+	if(pin <= 5) //can't write to pins 0 or 1 due to serial lines
+	{
+		//valid pin numbers, check for banned pins for digital read
+		pinMode(pin, INPUT);
+		Serial.println(digitalRead(pin) == 0 ? "Logic Low read" : "Logic High read");
+	}
+	else
+	{
+		Serial.println("Cannot read from this pin, it is a serial line!");
+	}
+}
+
+void attemptDigitalRead()
+{
+	//we are here looking to read the pin at this token. check if we are safe.
+	if(!(getCurrentToken() == INT || getCurrentToken() == FLOAT))
+	{
+		Serial.println("Cannot read pins that aren't numbers!");
+		return;
+	}
+
+	int pin = getCurrentParseData().toInt();
+	if(pin > 1) //can't write to pins 0 or 1 due to serial lines
+	{
+		//valid pin numbers, check for banned pins for digital read
+		pinMode(pin, INPUT);
+		Serial.println(digitalRead(pin) == 0 ? "Logic Low read" : "Logic High read");
+	}
+	else
+	{
+		Serial.println("Cannot read from this pin, it is a serial line!");
+	}
+}
+
+void attemptDigitalWrite()
+{
+
 }

@@ -1,8 +1,8 @@
 S:				statement | expression;
 statement:		readCommand |
 				setCommand;
-readCommand:	READ expression (ANALOG | DIGITAL)?;
-setCommand:		SET expression (DIGITAL | ANALOG) expression;
+readCommand:	READ (ANALOG | DIGITAL)? expression;
+setCommand:		SET (DIGITAL | ANALOG) expression expression;
 
 expression:		INT |
 				FLOAT |
