@@ -585,7 +585,7 @@ void attemptAnalogWrite()
 		(pin == 11)) //can only operate on pins 3, 5, 6, 9, 10, and 11. http://www.arduino.cc/en/Reference/AnalogWrite 
 	{
 		//valid pin numbers, check for banned pins for digital read
-		Serial.print("Assigning raw value "); Serial.println(val);
+		//Serial.print("Assigning raw value "); Serial.println(val);
 		pinMode(pin, OUTPUT);
 		delayMicroseconds(50); //slight delay to propogate
 		analogWrite(pin, val);
