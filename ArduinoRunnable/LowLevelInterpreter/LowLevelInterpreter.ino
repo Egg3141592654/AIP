@@ -89,6 +89,7 @@ void loop() {
 			//we are done with this line, do something with parse
 			lineInCnt = 0; //reset for the latest string
 			tokenIndex = 0; //reset for new stream of tokens
+			parseIndex = 0;
 			parse(lineIn);
 			justDone = true;
 		}
@@ -123,6 +124,7 @@ void parse(String input)
 	if(tokens[0].token == NONE)
 	{
 		Serial.println("Attempted to delete things that weren't here");
+		Serial.println("Done!");
 		return;
 	}
 
@@ -141,10 +143,10 @@ void parse(String input)
 	}
 
 	//flush it all out!
-	//Serial.print("Token number = "); Serial.println(tokenIndex);
 	for(int i = 0; i < tokenIndex; i++)
 	{
 		debug(&tokens[i]);
+		tokens[i].token = NONE;
 	}
 
 	Serial.println("Done!");
@@ -206,8 +208,9 @@ void nextToken(AEToken * toPass)
 				ch = readNextChar(); //there must be more, per contract
 				break;
 			default:
-				//Serial.println("Error, command not completed, flushing buffer!");
+				Serial.println("Error, unrecognized token identified!");
 				//lineIn.remove(0);
+				tokenIndex = 0;
 				return;
 		}
 	}
@@ -218,7 +221,6 @@ Scan and store an INT token into the tokens vector yo
 **/
 void scanINTToken(AEToken * toPass)
 {
-	Serial.println("Reading int");
 	String sb;
 	sb += readWord();
 	
@@ -230,13 +232,6 @@ void scanINTToken(AEToken * toPass)
 	}
 
 	tokens[tokenIndex].token = flt ? FLOAT : INT;
-	
-	/*
-	//char * logic
-	for(int i = 0; i < sb.length(); i++)
-	{
-		tokens[tokenIndex].data += sb[i];
-	}*/
 
 	//String logic
 	tokens[tokenIndex].data = "";
@@ -244,6 +239,8 @@ void scanINTToken(AEToken * toPass)
 	{
 		tokens[tokenIndex].data += sb[i];
 	}
+
+	//Serial.println("Numeric value string contains " + tokens[tokenIndex].data);
 
 	tokenIndex++; //integrate for the next token
 }
@@ -417,7 +414,8 @@ void debug(AEToken * target)
 		Serial.println(temp.toInt());
 		break;
 	case FLOAT:
-		Serial.print("FLOAT ");
+		Serial.print("FLOAT");
+		temp = target->data;
 		Serial.println(temp.toFloat());
 		break;
 	case READ:
@@ -484,6 +482,28 @@ void parseReadCommand()
 void parseSetCommand()
 {
 	//we alreaday know that the first token was the set
+	//check if the user set the next token to be analog or digital
+
+	switch(getNextToken())
+	{
+		case ANALOG:
+			getNextToken(); //set up the read function
+			attemptAnalogWrite();
+			break;
+		case DIGITAL:
+			getNextToken(); //set up the read function
+			attemptDigitalWrite();
+			break;
+		case INT:
+			attemptDigitalWrite();
+			break;
+		case FLOAT:
+			Serial.println("Warning, converting float to an int. This isn't safe yo!");
+			attemptDigitalWrite();
+			break;
+		default:
+			Serial.println("Parsing error on the read command. Please see the command outline for instructions");
+	}
 }
 
 Token peekNextToken()
@@ -515,7 +535,66 @@ String getCurrentParseData()
 
 void attemptAnalogWrite()
 {
+	//we are here looking to read the pin at this token. check if we are safe.
+	if(!(getCurrentToken() == INT || getCurrentToken() == FLOAT))
+	{
+		Serial.println("Cannot read pins that aren't numbers!");
+		return;
+	}
 
+	int pin = getCurrentParseData().toInt();
+	int val = 0;
+	float vlt = 0.0;
+
+	switch(getNextToken())
+	{
+		case INT:
+			val = getCurrentParseData().toInt();
+			if((val < 0) || (val > 255))
+			{
+				Serial.println("Integer values of 0 to 255 accepted inclusively!");
+			}
+
+			break;
+		case FLOAT:
+			vlt = getCurrentParseData().toFloat();
+			val = vlt * 51; //map 0.0 -> 5 V to 0 -> 255
+
+			if((val < 0) || (val > 255))
+			{
+				Serial.println("Float values between 0.0 and 5.0 volts inclusively!");
+			}
+
+			break;
+		case LOGICHIGH:
+			val = 255;
+			break;
+		case LOGICLOW:
+			val = 0;
+			break;
+		default:
+			Serial.println("Cannot set this pin to a non integer value!");
+			return;
+	}
+	
+	if((pin == 3) ||
+		(pin == 5) ||
+		(pin == 6) ||
+		(pin == 9) ||
+		(pin == 10) ||
+		(pin == 11)) //can only operate on pins 3, 5, 6, 9, 10, and 11. http://www.arduino.cc/en/Reference/AnalogWrite 
+	{
+		//valid pin numbers, check for banned pins for digital read
+		Serial.print("Assigning raw value "); Serial.println(val);
+		pinMode(pin, OUTPUT);
+		delayMicroseconds(50); //slight delay to propogate
+		analogWrite(pin, val);
+	}
+
+	else
+	{
+		Serial.println("Cannot write to this pin, availible pins are 3, 5, 6, 9, 10, and 11.");
+	}
 }
 
 void attemptAnalogRead()
@@ -531,8 +610,8 @@ void attemptAnalogRead()
 	if(pin <= 5) //can't write to pins 0 or 1 due to serial lines
 	{
 		//valid pin numbers, check for banned pins for digital read
-		pinMode(pin, INPUT);
-		Serial.println(digitalRead(pin) == 0 ? "Logic Low read" : "Logic High read");
+		int reading = analogRead(pin);
+		Serial.print("Read "); Serial.print(reading); Serial.print(" from ADC, or approximately "); Serial.print((reading * 5) / 1023.); Serial.println("V");
 	}
 	else
 	{
@@ -564,5 +643,50 @@ void attemptDigitalRead()
 
 void attemptDigitalWrite()
 {
+	//we are here looking to read the pin at this token. check if we are safe.
+	if(!(getCurrentToken() == INT || getCurrentToken() == FLOAT))
+	{
+		Serial.println("Cannot read pins that aren't numbers!");
+		return;
+	}
 
+	int pin = getCurrentParseData().toInt();
+	int val = 0;
+
+	switch(getNextToken())
+	{
+		case INT:
+			val = getCurrentParseData().toInt();
+			if((val < 0) || (val > 1))
+			{
+				Serial.println("Integer values of 0 or 1 accepted only!");
+				return;
+			}
+
+			break;
+		case FLOAT:
+			Serial.println("Floats not accepted for digital writes!");
+			return;
+		case LOGICHIGH:
+			val = 1;
+			break;
+		case LOGICLOW:
+			val = 0;
+			break;
+		default:
+			Serial.println("Cannot set this pin to a non integer value!");
+			return;
+	}
+	
+	if((pin > 1) && (pin <= 13)) //can't write to pins 0 or 1 due to serial lines
+	{
+		//valid pin numbers, check for banned pins for digital read
+		pinMode(pin, OUTPUT);
+		digitalWrite(pin, val);
+	}
+
+	else
+	{
+		Serial.println("Cannot write to this pin, it is a serial line!");
+	}
 }
